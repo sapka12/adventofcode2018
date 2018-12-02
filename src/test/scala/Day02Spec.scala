@@ -6,7 +6,7 @@ class Day02Spec extends FlatSpec with Matchers {
 
   def toInts(text: String): List[String] = text.split(",").map(_.trim).toList
 
-  val lines = Source.fromFile("day02-0-input.txt").getLines().toList
+  private val lines = Source.fromFile("day02-0-input.txt").getLines().toList
 
   behavior of "countOfx2Andx3"
 
@@ -56,7 +56,20 @@ class Day02Spec extends FlatSpec with Matchers {
     Day02.task1(lines) shouldBe 6944
   }
 
-  //  it should "task2" in {
-//    Day02.task2(numbers) shouldBe 77674
-//  }
+  it should "test of task2" in {
+
+    Day02.task2(Stream(
+      "abcde",
+      "fghij",
+      "klmno",
+      "pqrst",
+      "fguij",
+      "axcye",
+      "wvxyz"
+    )) shouldBe "fgij"
+  }
+
+  it should "task2" in {
+    Day02.task2(lines.to) shouldBe "srijafjzloguvlntqmphenbkd"
+  }
 }
