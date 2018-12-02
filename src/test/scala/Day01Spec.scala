@@ -6,7 +6,7 @@ class Day01Spec extends FlatSpec with Matchers {
 
   def toInts(text: String): List[Int] = text.split(",").toList.map(_.trim.toInt)
 
-  val numbers = Source.fromFile("day01-0-input.txt").getLines().map(_.toInt).toList
+  private val numbers = Source.fromFile("day01-0-input.txt").getLines().map(_.toInt).toList
 
   behavior of "Day01"
 
