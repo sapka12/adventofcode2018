@@ -5,6 +5,8 @@ case class Claim(id: Int, offset: Coord, size: Coord){
     x <- offset.x until (offset.x + size.x)
     y <- offset.y until (offset.y + size.y)
   } yield Coord(x, y)).toSet
+
+  val hasOverlap: Claim => Boolean = _.coords.intersect(coords).nonEmpty
 }
 
 object Claim {
@@ -26,6 +28,14 @@ object Day03 {
     val all = claims.flatMap(Claim(_).coords)
     val remaining = (all diff all.distinct).toSet
     remaining.size
+  }
+
+  def task2(rows: List[String]): Int = {
+    val claims = rows.map(Claim(_))
+    claims
+      .filterNot(claim =>
+        claims.diff(List(claim)).exists(_.hasOverlap(claim))
+      ).head.id
   }
 
 }
