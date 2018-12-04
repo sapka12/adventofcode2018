@@ -33,8 +33,21 @@ class Day04Spec extends FlatSpec with Matchers {
     Day04.task1(lines) shouldBe 98680
   }
 
-//  it should "test of task2" in {
-//    Day04.task2(testData) shouldBe 4455
-//  }
+  it should "test of task2" in {
+    Day04.task2(testData) shouldBe 4455
+  }
+
+  it should "task2" in {
+    val wrongAnswers = List(
+      119236,
+      126115
+    )
+    val result = Day04.task2(lines)
+
+    wrongAnswers.foreach{wrongAnswer =>
+      result shouldNot be(wrongAnswer)
+    }
+    result shouldBe 0
+  }
 
 }

@@ -6,7 +6,7 @@ object Day01 {
     case (idx, freq, visitedFreqs) =>
       (idx + 1, freq + ints(idx % ints.size), freq :: visitedFreqs)
   }.flatMap{
-    case (idx, freq, visitedFreqs) =>
+    case (_, freq, visitedFreqs) =>
       if (visitedFreqs contains freq) Some(freq) else None
   }.head
 }

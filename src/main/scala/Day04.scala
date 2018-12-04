@@ -18,12 +18,16 @@ object Log{
 }
 
 case class Asleep(from: Long, to: Option[Long] = None){
-  lazy val slept = to.map(_ - from)
-  lazy val rangeOf = to.map(from until _ ).get
+  lazy val slept: Option[Long] = to.map(_ - from)
+
+  //TODO: remove get
+  lazy val rangeOf: List[Long] = to.map(from until _ ).get.toList
 }
 case class Shift(id: Int, asleeps: List[Asleep])
 
 object Day04 {
+
+  private val minutes = (0 until 60).toList
 
   private def newShiftStarts(id: Int)(implicit shifts: List[Shift]): List[Shift] = Shift(id, List()) :: shifts
 
@@ -40,33 +44,56 @@ object Day04 {
     currentShift.copy(asleeps = closedSleep :: currentShift.asleeps.tail) :: shifts.tail
   }
 
+  def byAsleeps(lines: List[String]): Map[Int, List[Asleep]] = lines.map(Log(_))
+    .sortBy(_.minute).foldLeft[List[Shift]](List())((shifts, log) => {
+    implicit val _shifts: List[Shift] = shifts
+    val msgParts = log.msg.split(" ")
+    msgParts(0) match {
+      case "Guard" => newShiftStarts(msgParts(1).replace("#", "").toInt)
+      case "falls" => guardFallsAsleep(log.minute)
+      case "wakes" => guardWakesUp(log.minute)
+      case _ => throw new RuntimeException
+    }
+  }).groupBy(_.id).mapValues(_.flatMap(_.asleeps))
+
   def task1(lines: List[String]): Int = {
 
-    val allShifts = lines.map(Log(_)).sortBy(_.minute).foldLeft[List[Shift]](List())((shifts, log) => {
-      implicit val _shifts = shifts
-      val msgParts = log.msg.split(" ")
-      msgParts(0) match {
-        case "Guard" => newShiftStarts(msgParts(1).replace("#", "").toInt)
-        case "falls" => guardFallsAsleep(log.minute)
-        case "wakes" => guardWakesUp(log.minute)
-        case _ => throw new RuntimeException
-      }
-    })
+    val asleeps = byAsleeps(lines)
 
-    val mostMinutesAsleepGuard =  allShifts.groupBy(_.id)
-      .mapValues(_shifts => _shifts.flatMap(_.asleeps.map(_.slept.getOrElse(0L))))
-      .mapValues(_.sum).maxBy(_._2)._1
-
-    val guardsAsleeps = allShifts.filter(_.id == mostMinutesAsleepGuard).flatMap(_.asleeps).flatMap(_.rangeOf)
+    val mostMinutesAsleepGuard =  asleeps.mapValues(_.flatMap(_.slept).sum).maxBy(_._2)._1
+    val guardsAsleeps = asleeps(mostMinutesAsleepGuard)
 
     val countMins = for {
-      minute <- (0 until 60).toList
-      asleepMin <- guardsAsleeps
+      minute <- minutes
+      guardsAsleep <- guardsAsleeps
+      asleepMin <- guardsAsleep.rangeOf
       if Math.floorMod(asleepMin, 60) == minute
     } yield (minute, 1)
 
     val frequentMinute = countMins.groupBy(_._1).mapValues(_.map(_._2).sum).maxBy(_._2)._1
 
     mostMinutesAsleepGuard * frequentMinute
+  }
+
+  def task2(lines: List[String]): Int = {
+    val allShifts = byAsleeps(lines)
+
+    val guardAsleepMinutes = for {
+      (guardId, _asleeps) <- allShifts.toList
+      _asleep <- _asleeps
+      minuteWhenGuardSleeps <- _asleep.rangeOf
+      minuteOfHour <- minutes
+      if Math.floorMod(minuteWhenGuardSleeps, 60) == minuteOfHour
+    } yield (guardId, minuteOfHour)
+
+    def mostFrequentMinute(m: Map[Int, Int]) = m.maxBy(_._2)._1
+
+    val maxMinutePerGuards = guardAsleepMinutes.groupBy(_._1)
+      .mapValues(_.map(_._2))
+      .mapValues(_.groupBy(identity).mapValues(_.size))
+      .mapValues(mostFrequentMinute)
+
+    val maxMinutePerGuard = maxMinutePerGuards.maxBy(_._2)
+    maxMinutePerGuard._1 * maxMinutePerGuard._2
   }
 }
