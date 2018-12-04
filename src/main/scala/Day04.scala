@@ -1,5 +1,7 @@
 import java.text.SimpleDateFormat
 
+import scala.util.Try
+
 case class Log(minute: Long, msg: String)
 
 object Log{
@@ -22,6 +24,10 @@ case class Asleep(from: Long, to: Option[Long] = None){
 
   //TODO: remove get
   lazy val rangeOf: List[Long] = to.map(from until _ ).get.toList
+    .filter{minute =>
+      val minOfDay = Math.floorMod(minute + 60, 24 * 60)
+      minOfDay < 60
+    }
 }
 case class Shift(id: Int, asleeps: List[Asleep])
 
@@ -70,7 +76,11 @@ object Day04 {
       if Math.floorMod(asleepMin, 60) == minute
     } yield (minute, 1)
 
-    val frequentMinute = countMins.groupBy(_._1).mapValues(_.map(_._2).sum).maxBy(_._2)._1
+//    val frequentMinute = countMins.groupBy(_._1).mapValues(_.map(_._2).sum).maxBy(_._2)._1
+    val asdf = countMins.groupBy(_._1).mapValues(_.map(_._2).sum)
+    val frequentMinute = Try{
+      asdf.maxBy(_._2)._1
+    }.getOrElse(0)
 
     mostMinutesAsleepGuard * frequentMinute
   }
