@@ -4,8 +4,9 @@ import scala.util.Try
 
 case class Log(minute: Long, msg: String)
 
-object Log{
+object Log {
   private val FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm")
+
   def parseMinute(time: String): Long = FORMAT.parse(time).getTime / 60000
 
   //[1518-09-13 00:12] falls asleep
@@ -19,16 +20,11 @@ object Log{
   }
 }
 
-case class Asleep(from: Long, to: Option[Long] = None){
+case class Asleep(from: Long, to: Option[Long] = None) {
   lazy val slept: Option[Long] = to.map(_ - from)
-
-  //TODO: remove get
-  lazy val rangeOf: List[Long] = to.map(from until _ ).get.toList
-    .filter{minute =>
-      val minOfDay = Math.floorMod(minute + 60, 24 * 60)
-      minOfDay < 60
-    }
+  lazy val rangeOf: List[Long] = to.map(from until _).toList.flatten
 }
+
 case class Shift(id: Int, asleeps: List[Asleep])
 
 object Day04 {
@@ -66,7 +62,9 @@ object Day04 {
 
     val asleeps = byAsleeps(lines)
 
-    val mostMinutesAsleepGuard =  asleeps.mapValues(_.flatMap(_.slept).sum).maxBy(_._2)._1
+    val (mostMinutesAsleepGuard, _) = asleeps
+      .mapValues(_.flatMap(_.slept).sum)
+      .maxBy{case (_, count) => count}
     val guardsAsleeps = asleeps(mostMinutesAsleepGuard)
 
     val countMins = for {
@@ -76,10 +74,11 @@ object Day04 {
       if Math.floorMod(asleepMin, 60) == minute
     } yield (minute, 1)
 
-//    val frequentMinute = countMins.groupBy(_._1).mapValues(_.map(_._2).sum).maxBy(_._2)._1
-    val asdf = countMins.groupBy(_._1).mapValues(_.map(_._2).sum)
-    val frequentMinute = Try{
-      asdf.maxBy(_._2)._1
+    val frequentMinute = Try {
+      countMins
+        .groupBy{case (minute, _) => minute}
+        .mapValues(_.map{case (_, one) => one}.sum)
+        .maxBy{case (_, counter) => counter}._1
     }.getOrElse(0)
 
     mostMinutesAsleepGuard * frequentMinute
@@ -96,14 +95,23 @@ object Day04 {
       if Math.floorMod(minuteWhenGuardSleeps, 60) == minuteOfHour
     } yield (guardId, minuteOfHour)
 
-    def mostFrequentMinute(m: Map[Int, Int]) = m.maxBy(_._2)._1
+    val minuteOfHourCounter: List[(Int, Int)] => List[(Int, Int)] = _
+      .map{case (_, minuteOfHour) => minuteOfHour}
+      .groupBy(identity)
+      .mapValues(_.size)
+      .toList
 
-    val maxMinutePerGuards = guardAsleepMinutes.groupBy(_._1)
-      .mapValues(_.map(_._2))
-      .mapValues(_.groupBy(identity).mapValues(_.size))
-      .mapValues(mostFrequentMinute)
+    def firstMaxSleptMinute(minOfHourCounters: List[(Int, Int)]) = {
+      val maxSleptMin = minOfHourCounters.map{case (_, count) => count}.max
+      minOfHourCounters.filter{case (_, count) => count == maxSleptMin}.head
+    }
 
-    val maxMinutePerGuard = maxMinutePerGuards.maxBy(_._2)
-    maxMinutePerGuard._1 * maxMinutePerGuard._2
+    val (guardId, (minute, _)) = guardAsleepMinutes
+      .groupBy{case (id, _) => id}
+      .mapValues(minuteOfHourCounter)
+      .mapValues(firstMaxSleptMinute)
+      .toList.maxBy{case (_, (_, count)) => count}
+
+    guardId * minute
   }
 }

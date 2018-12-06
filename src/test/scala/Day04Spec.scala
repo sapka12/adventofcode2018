@@ -4,7 +4,10 @@ import scala.io.Source
 
 class Day04Spec extends FlatSpec with Matchers {
 
-  private val lines = Source.fromFile("day04-0-input.txt").getLines().toList
+  private val lines = Source.fromFile("day04-0-input.txt").getLines().toList.sorted
+
+  lines.foreach(println)
+
   private val testData = """[1518-11-01 00:00] Guard #10 begins shift
                            |[1518-11-01 00:05] falls asleep
                            |[1518-11-01 00:25] wakes up
@@ -38,16 +41,7 @@ class Day04Spec extends FlatSpec with Matchers {
   }
 
   it should "task2" in {
-    val wrongAnswers = List(
-      119236,
-      126115
-    )
-    val result = Day04.task2(lines)
-
-    wrongAnswers.foreach{wrongAnswer =>
-      result shouldNot be(wrongAnswer)
-    }
-    result shouldBe 0
+    Day04.task2(lines) shouldBe 9763
   }
 
 }
