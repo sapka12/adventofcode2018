@@ -2,15 +2,32 @@ import scala.annotation.tailrec
 
 object Day07 {
 
+  def dependencies(step: Step, instructions: List[Instruction]): Set[Step] = {
+
+    def go(steps: Set[Step]): Set[Step] = {
+      val deps = for {
+        _step <- steps
+        (a, b) <- instructions
+        if _step == b
+      } yield a
+
+      val aggr = deps ++ steps
+
+      if (aggr.size > steps.size) go(aggr)
+      else steps
+    }
+
+    go(Set(step)) -- Set(step)
+  }
+
   private def getInstructions(lines: List[String]) = {
     lines.map(line => (line(5), line(36)))
   }
 
-  private def allStepsFromInstructions(instructions: List[(Char, Char)]) =
-    instructions.flatMap { case (x, y) => s"$x$y" }.toSet.mkString
+  private def allStepsFromInstructions(instructions: List[Instruction]) =
+    (for ((x, y) <- instructions) yield s"$x$y").toSet.mkString
 
-  def hasDependency(step: Char, instructions: List[(Char, Char)]) =
-    instructions.map{case (_, followUpStep) => followUpStep}.contains(step)
+  def hasDependency(step: Char, instructions: List[(Char, Char)]) = !dependencies(step, instructions).isEmpty
 
   def task1(lines: List[String]): String = {
     val allInstructions = getInstructions(lines)
@@ -34,58 +51,51 @@ object Day07 {
     go(allSteps, "")
   }
 
-  type Instruction = (Char, Char)
+  type Step = Char
+  type Instruction = (Step, Step)
   case class Worker(name: Char, worked: Int){
     def workTimeWith(extraTime: Int): Int = extraTime + 1 + name - 'A'
   }
-  case class WorkState(lastSec: Int, workers: List[Worker], instructions: List[Instruction], maxWorkers: Int)
 
-  private def nextStepsToWorkOn(instructions: List[Instruction], numOfStepsNeeded: Int): String = {
+  def working(worker: Worker, extraTime: Int) = worker.worked < worker.workTimeWith(extraTime)
 
-    @tailrec
-    def go(moreSteps: Int, aggr: String, instructions: List[Instruction]): String = {
-      if (moreSteps == 0) aggr
-      else {
-        val remainingSteps = allStepsFromInstructions(instructions)
-        val freeSteps = remainingSteps.filterNot(hasDependency(_, instructions)).sorted
-        val stepNeeds = freeSteps.length min moreSteps
-        val usedFreeSteps = freeSteps.take(stepNeeds)
+  case class WorkState(lastSec: Int, workers: List[Worker], maxWorkers: Int, doneSteps: Set[Step]){
+    def next(extraTime: Int, allSteps: String): WorkState = {
 
-        go(
-          moreSteps - stepNeeds,
-          aggr + usedFreeSteps,
-          instructions.filterNot{case (s, _) => usedFreeSteps.contains(s)}
-        )
+      val (stillWorkingWorkers, doneWorkers) = workers
+        .map(worker => worker.copy(worked = worker.worked + 1))
+        .partition(working(_, extraTime))
+
+      val aggrDoneSteps = doneSteps ++ doneWorkers.map(_.name)
+
+      val newWorkers: List[Worker] = {
+        val needs = maxWorkers - stillWorkingWorkers.size
+        if (needs == 0) List()
+        else {
+       val remainingSteps =  allSteps.filterNot(aggrDoneSteps.contains(_))
+  re
+
+          ???
+        }
       }
+      val aggrWorkers = workers ++ newWorkers
+
+      WorkState(lastSec + 1, aggrWorkers, maxWorkers, aggrDoneSteps)
     }
-
-
-    go(numOfStepsNeeded, "", instructions)
   }
 
   def task2(lines: List[String], workerCount: Int, extraTime: Int): Int = {
 
-    val initState = WorkState(0, List(), getInstructions(lines), workerCount)
 
-    val solution = Stream.iterate(initState){
-      case WorkState(sec, workers, instructions, maxWorkers) =>
+    val allInstructions = getInstructions(lines)
+    val allSteps = allStepsFromInstructions(allInstructions)
 
-        val stillWorkingWorkers = workers
-          .map(worker => worker.copy(worked = worker.worked + 1))
-          .filter(worker => worker.worked < worker.workTimeWith(extraTime))
+    val initState = WorkState(0, List(), workerCount, Set())
 
-        val newStepsToWorkOn = nextStepsToWorkOn(instructions, maxWorkers - stillWorkingWorkers.size)
-
-        val nextWorkers = stillWorkingWorkers ::: newStepsToWorkOn.map(step => Worker(step, 0)).toList
-
-        val remainingInstructions = instructions.filterNot{case (s, _) => newStepsToWorkOn.contains(s)}
-
-        WorkState(sec + 1, nextWorkers, remainingInstructions, maxWorkers)
-    }.filter{case WorkState(sec, workers, instructions, maxWorkers) => workers.isEmpty && instructions.isEmpty}.head
+    val solution = Stream.iterate(initState)(_.next(extraTime, allSteps))
+      .filter{case WorkState(_, _, _, doneSteps) => allSteps.length == doneSteps.size}
+      .head
 
     solution.lastSec
   }
-
-
-
 }
